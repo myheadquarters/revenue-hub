@@ -218,10 +218,38 @@ export default function RevenueHub() {
 
   const saveData = async (updated: Data) => {
     setSaving(true);
-    await fetch('/api/initiatives', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated) });
-    setData(updated);
+    const res = await fetch('/api/initiatives', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated) });
+    const result = await res.json();
+    if (result.ok) {
+      setData(updated);
+    } else {
+      alert('Save failed: ' + (result.error || 'Unknown error. KV storage may not be configured.'));
+    }
     setSaving(false);
     setModal(null);
+  };
+
+  const deleteExpired = () => {
+    if (!data) return;
+    const expired = data.grants.filter(g => {
+      if (['Rolling', 'Continuous', 'Rolling 2026', ''].includes(g.deadline)) return false;
+      const diff = (new Date(g.deadline).getTime() - Date.now()) / 86400000;
+      return diff < 0 && !['Applied', 'Pending', 'Won'].includes(g.status);
+    });
+    if (expired.length === 0) { alert('No expired grants to clean up!'); return; }
+    if (!confirm(`Delete ${expired.length} expired grant(s) that weren't applied to?`)) return;
+    saveData({ ...data, grants: data.grants.filter(g => !expired.find(e => e.id === g.id)) });
+  };
+
+  const addToPipeline = (g: DbGrant) => {
+    if (!data) return;
+    const newGrant: Grant = {
+      id: `g${Date.now()}`, name: g.name, amount: g.amount || 'Variable',
+      amountValue: 0, deadline: g.deadline || 'Rolling', status: 'Not Applied',
+      url: g.url || '#', description: g.description || '', notes: '',
+    };
+    saveData({ ...data, grants: [...data.grants, newGrant] });
+    setGrantSubTab('pipeline');
   };
 
   const totalGrantPotential = data?.grants.filter(g => g.status !== 'Lost').reduce((s, g) => s + g.amountValue, 0) || 0;
@@ -301,7 +329,10 @@ export default function RevenueHub() {
                   ))}
                 </div>
                 {grantSubTab === 'pipeline' && (
-                  <button onClick={() => setModal({ type: 'add-grant' })} className="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg">+ Add Grant</button>
+                  <div className="flex gap-2">
+                    <button onClick={deleteExpired} className="text-xs text-zinc-500 hover:text-red-400 px-3 py-2 rounded-lg border border-zinc-800 hover:border-red-900 transition-colors">🗑 Clean expired</button>
+                    <button onClick={() => setModal({ type: 'add-grant' })} className="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg">+ Add Grant</button>
+                  </div>
                 )}
               </div>
 
@@ -366,9 +397,10 @@ export default function RevenueHub() {
                             <td className="py-4 pr-4 text-sm text-emerald-400 whitespace-nowrap">{g.amount || 'Variable'}</td>
                             <td className="py-4 pr-4 whitespace-nowrap">{deadlineTag(g.deadline || 'Rolling')}</td>
                             <td className="py-4">
-                              {g.url && g.url !== '#'
-                                ? <a href={g.url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 hover:text-indigo-300">Apply →</a>
-                                : <span className="text-xs text-zinc-600">—</span>}
+                              <div className="flex gap-3 items-center">
+                                <button onClick={() => addToPipeline(g)} className="text-xs text-zinc-500 hover:text-indigo-400 whitespace-nowrap transition-colors">+ Pipeline</button>
+                                {g.url && g.url !== '#' && <a href={g.url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 hover:text-indigo-300">Apply →</a>}
+                              </div>
                             </td>
                           </tr>
                         ))}</tbody>
