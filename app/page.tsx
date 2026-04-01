@@ -236,7 +236,7 @@ export default function RevenueHub() {
       {/* Header */}
       <div className="border-b border-zinc-800 px-8 py-5 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-sm font-bold">YB</div>
+          <div className="w-9 h-9 rounded-xl bg-yellow-400 text-zinc-950 flex items-center justify-center text-sm font-bold">YB</div>
           <div>
             <div className="text-lg font-semibold tracking-tight">Revenue Initiatives Hub</div>
             <div className="text-xs text-zinc-500">Yrmis Barroeta · myheadquarters.club</div>
@@ -289,7 +289,15 @@ export default function RevenueHub() {
                     <th className={thCls}>Deadline</th><th className={thCls}>Status</th>
                     <th className={thCls}>Notes</th><th className={thCls}></th>
                   </tr></thead>
-                  <tbody>{data.grants.map(g => (
+                  <tbody>{[...data.grants].sort((a, b) => {
+                      const rolling = ['Rolling', 'Continuous', 'Rolling 2026', ''];
+                      const aRolling = rolling.includes(a.deadline);
+                      const bRolling = rolling.includes(b.deadline);
+                      if (aRolling && bRolling) return 0;
+                      if (aRolling) return 1;
+                      if (bRolling) return -1;
+                      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+                    }).map(g => (
                     <tr key={g.id} className={trCls}>
                       <td className="py-4 pr-4">
                         <div className="font-medium text-white text-sm">{g.name}</div>
