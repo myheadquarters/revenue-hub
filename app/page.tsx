@@ -186,9 +186,17 @@ function ItemModal({ modal, data, onClose, onSave }: {
   );
 }
 
+type DbGrant = { name: string; amount: string; description: string; deadline: string; url: string };
+type GrantDb = Record<string, DbGrant[]>;
+const DB_CATEGORIES = ['Women Grants', 'Business Grants', 'Non-Profits'] as const;
+type GrantSubTab = 'pipeline' | typeof DB_CATEGORIES[number];
+
 // ==================== MAIN ====================
 export default function RevenueHub() {
   const [activeTab, setActiveTab] = useState<Tab>('grants');
+  const [grantSubTab, setGrantSubTab] = useState<GrantSubTab>('pipeline');
+  const [grantDb, setGrantDb] = useState<GrantDb>({});
+  const [expandedCat, setExpandedCat] = useState(false);
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<{ type: string; item?: unknown } | null>(null);
@@ -197,8 +205,12 @@ export default function RevenueHub() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/initiatives');
-      setData(await res.json());
+      const [init, db] = await Promise.all([
+        fetch('/api/initiatives').then(r => r.json()),
+        fetch('/api/grants-db').then(r => r.json()),
+      ]);
+      setData(init);
+      setGrantDb(db);
     } finally { setLoading(false); }
   }, []);
 
@@ -278,45 +290,99 @@ export default function RevenueHub() {
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8">
             {/* GRANTS */}
             {activeTab === 'grants' && <>
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-medium text-zinc-300">Grants Pipeline</h3>
-                <button onClick={() => setModal({ type: 'add-grant' })} className="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg">+ Add Grant</button>
+              {/* Grant sub-tabs */}
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex gap-1.5 flex-wrap">
+                  {(['pipeline', ...DB_CATEGORIES] as GrantSubTab[]).map(sub => (
+                    <button key={sub} onClick={() => { setGrantSubTab(sub); setExpandedCat(false); }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${grantSubTab === sub ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                      {sub === 'pipeline' ? '📋 My Pipeline' : sub === 'Women Grants' ? '👩 Women Grants' : sub === 'Business Grants' ? '💼 Business Grants' : '🏛 Non-Profits'}
+                    </button>
+                  ))}
+                </div>
+                {grantSubTab === 'pipeline' && (
+                  <button onClick={() => setModal({ type: 'add-grant' })} className="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg">+ Add Grant</button>
+                )}
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead><tr className="border-b border-zinc-800">
-                    <th className={thCls}>Grant</th><th className={thCls}>Amount</th>
-                    <th className={thCls}>Deadline</th><th className={thCls}>Status</th>
-                    <th className={thCls}>Notes</th><th className={thCls}></th>
-                  </tr></thead>
-                  <tbody>{[...data.grants].sort((a, b) => {
-                      const rolling = ['Rolling', 'Continuous', 'Rolling 2026', ''];
-                      const aRolling = rolling.includes(a.deadline);
-                      const bRolling = rolling.includes(b.deadline);
-                      if (aRolling && bRolling) return 0;
-                      if (aRolling) return 1;
-                      if (bRolling) return -1;
-                      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
-                    }).map(g => (
-                    <tr key={g.id} className={trCls}>
-                      <td className="py-4 pr-4">
-                        <div className="font-medium text-white text-sm">{g.name}</div>
-                        <div className="text-xs text-zinc-500 mt-0.5 max-w-xs">{g.description.slice(0, 80)}{g.description.length > 80 ? '…' : ''}</div>
-                      </td>
-                      <td className="py-4 pr-4 text-sm text-emerald-400 whitespace-nowrap">{g.amount}</td>
-                      <td className="py-4 pr-4 whitespace-nowrap">{deadlineTag(g.deadline)}</td>
-                      <td className="py-4 pr-4"><span className={`text-xs px-2 py-1 rounded-full ${STATUS_COLORS[g.status]}`}>{g.status}</span></td>
-                      <td className="py-4 pr-4 text-xs text-zinc-500 max-w-xs">{g.notes || '—'}</td>
-                      <td className="py-4">
-                        <div className="flex gap-3">
-                          <button onClick={() => setModal({ type: 'edit-grant', item: g })} className="text-xs text-zinc-500 hover:text-white">Edit</button>
-                          {g.url && g.url !== '#' && <a href={g.url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 hover:text-indigo-300">Apply →</a>}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}</tbody>
-                </table>
-              </div>
+
+              {/* Pipeline sub-tab */}
+              {grantSubTab === 'pipeline' && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead><tr className="border-b border-zinc-800">
+                      <th className={thCls}>Grant</th><th className={thCls}>Amount</th>
+                      <th className={thCls}>Deadline</th><th className={thCls}>Status</th>
+                      <th className={thCls}>Notes</th><th className={thCls}></th>
+                    </tr></thead>
+                    <tbody>{[...data.grants].sort((a, b) => {
+                        const rolling = ['Rolling', 'Continuous', 'Rolling 2026', ''];
+                        const aRolling = rolling.includes(a.deadline);
+                        const bRolling = rolling.includes(b.deadline);
+                        if (aRolling && bRolling) return 0;
+                        if (aRolling) return 1;
+                        if (bRolling) return -1;
+                        return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+                      }).map(g => (
+                      <tr key={g.id} className={trCls}>
+                        <td className="py-4 pr-4">
+                          <div className="font-medium text-white text-sm">{g.name}</div>
+                          <div className="text-xs text-zinc-500 mt-0.5 max-w-xs">{g.description.slice(0, 80)}{g.description.length > 80 ? '…' : ''}</div>
+                        </td>
+                        <td className="py-4 pr-4 text-sm text-emerald-400 whitespace-nowrap">{g.amount}</td>
+                        <td className="py-4 pr-4 whitespace-nowrap">{deadlineTag(g.deadline)}</td>
+                        <td className="py-4 pr-4"><span className={`text-xs px-2 py-1 rounded-full ${STATUS_COLORS[g.status]}`}>{g.status}</span></td>
+                        <td className="py-4 pr-4 text-xs text-zinc-500 max-w-xs">{g.notes || '—'}</td>
+                        <td className="py-4">
+                          <div className="flex gap-3">
+                            <button onClick={() => setModal({ type: 'edit-grant', item: g })} className="text-xs text-zinc-500 hover:text-white">Edit</button>
+                            {g.url && g.url !== '#' && <a href={g.url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 hover:text-indigo-300">Apply →</a>}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* DB category sub-tabs */}
+              {grantSubTab !== 'pipeline' && (() => {
+                const list = grantDb[grantSubTab] || [];
+                const shown = expandedCat ? list : list.slice(0, 8);
+                return (
+                  <>
+                    <div className="text-xs text-zinc-500 mb-4">{list.length} grants in this category</div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                        <thead><tr className="border-b border-zinc-800">
+                          <th className={thCls}>Grant</th><th className={thCls}>Amount</th>
+                          <th className={thCls}>Deadline</th><th className={thCls}></th>
+                        </tr></thead>
+                        <tbody>{shown.map((g, i) => (
+                          <tr key={i} className={trCls}>
+                            <td className="py-4 pr-4">
+                              <div className="font-medium text-white text-sm">{g.name}</div>
+                              <div className="text-xs text-zinc-500 mt-0.5 max-w-sm">{(g.description || '').slice(0, 100)}{(g.description || '').length > 100 ? '…' : ''}</div>
+                            </td>
+                            <td className="py-4 pr-4 text-sm text-emerald-400 whitespace-nowrap">{g.amount || 'Variable'}</td>
+                            <td className="py-4 pr-4 whitespace-nowrap">{deadlineTag(g.deadline || 'Rolling')}</td>
+                            <td className="py-4">
+                              {g.url && g.url !== '#'
+                                ? <a href={g.url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 hover:text-indigo-300">Apply →</a>
+                                : <span className="text-xs text-zinc-600">—</span>}
+                            </td>
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                    {list.length > 8 && (
+                      <button onClick={() => setExpandedCat(v => !v)}
+                        className="mt-4 w-full text-xs text-zinc-500 hover:text-white py-2 border border-zinc-800 hover:border-zinc-600 rounded-lg transition-colors">
+                        {expandedCat ? `Show less ↑` : `+ Show all ${list.length} grants ↓`}
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
             </>}
 
             {/* SPONSORS */}
