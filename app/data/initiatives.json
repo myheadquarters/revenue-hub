@@ -1,0 +1,141 @@
+{
+  "grants": [
+    {
+      "id": "g1",
+      "name": "Amber Grant - WomensNet",
+      "amount": "$10,000/mo + $50,000 year-end",
+      "amountValue": 10000,
+      "deadline": "Rolling",
+      "status": "Not Applied",
+      "url": "https://ambergrantsforwomen.com/get-an-amber-grant/apply-now/",
+      "description": "Monthly grants for women-owned businesses. 3 monthly grants + year-end $50K award.",
+      "notes": ""
+    },
+    {
+      "id": "g2",
+      "name": "IFundWomen Universal Grant",
+      "amount": "Variable",
+      "amountValue": 5000,
+      "deadline": "Rolling",
+      "status": "Not Applied",
+      "url": "https://ifundwomen.com/grants/apply-for-grants",
+      "description": "Universal application matched to multiple corporate grant partners. IFWOC track for women of color.",
+      "notes": ""
+    },
+    {
+      "id": "g3",
+      "name": "Entreprenista Evolve Growth Grant",
+      "amount": "$5,000",
+      "amountValue": 5000,
+      "deadline": "2026-06-19",
+      "status": "Not Applied",
+      "url": "https://entreprenista.com",
+      "description": "Quarterly grant for U.S. women-owned businesses with $100K+ revenue. Rewards newsletter reach and media brands.",
+      "notes": ""
+    },
+    {
+      "id": "g4",
+      "name": "Hey Helen Grant - Visionaries",
+      "amount": "$10,000",
+      "amountValue": 10000,
+      "deadline": "2026-04-30",
+      "status": "Not Applied",
+      "url": "https://visionaries.co/helen-grant/",
+      "description": "Unrestricted cash for woman founders. Under $1M revenue. Winner announced June 1, 2026.",
+      "notes": ""
+    },
+    {
+      "id": "g5",
+      "name": "Intuit QuickBooks x Mailchimp Small Business Hero",
+      "amount": "$20,000",
+      "amountValue": 20000,
+      "deadline": "2026-05-15",
+      "status": "Not Applied",
+      "url": "https://intuit.promo.eprize.com/smallbusiness/",
+      "description": "Nomination-based. Rewards courage, perseverance, and community impact. Also includes Mailchimp resources.",
+      "notes": ""
+    },
+    {
+      "id": "g6",
+      "name": "Black Girl Ventures Pitch Competition",
+      "amount": "$5,000 - $15,000",
+      "amountValue": 10000,
+      "deadline": "Rolling 2026",
+      "status": "Not Applied",
+      "url": "https://blackgirlventures.org/bgv-pitch",
+      "description": "Crowdfunded pitch competition for Black/Brown women founders under $1M revenue.",
+      "notes": ""
+    },
+    {
+      "id": "g7",
+      "name": "Patagonia Grant Program",
+      "amount": "$5,000 - $20,000",
+      "amountValue": 12500,
+      "deadline": "Rolling",
+      "status": "Not Applied",
+      "url": "https://www.patagonia.com/how-we-fund-grassroots-activism.html",
+      "description": "Funding to nonprofits and organizations with missions to protect the environment.",
+      "notes": ""
+    },
+    {
+      "id": "g8",
+      "name": "Digital Communities Grant",
+      "amount": "$2,500 - $10,000",
+      "amountValue": 6250,
+      "deadline": "Continuous",
+      "status": "Not Applied",
+      "url": "#",
+      "description": "Micro grants for everyday entrepreneurs building unconventional learning ecosystems.",
+      "notes": ""
+    }
+  ],
+  "sponsors": [
+    {
+      "id": "s1",
+      "company": "Example Brand Co.",
+      "contact": "",
+      "email": "",
+      "deal": "$2,500 per edition",
+      "dealValue": 2500,
+      "editions": "2",
+      "status": "Prospect",
+      "notes": "Add your first sponsor here"
+    }
+  ],
+  "partnerships": [
+    {
+      "id": "p1",
+      "company": "Example Partner",
+      "type": "Affiliate",
+      "value": "$1,000",
+      "dealValue": 1000,
+      "status": "Prospect",
+      "startDate": "",
+      "notes": "Add your first partnership here"
+    }
+  ],
+  "speaking": [
+    {
+      "id": "sp1",
+      "event": "Example Conference",
+      "organizer": "",
+      "fee": "$5,000",
+      "feeValue": 5000,
+      "date": "",
+      "status": "Prospect",
+      "location": "",
+      "notes": "Add your first speaking engagement here"
+    }
+  ],
+  "memberships": [
+    {
+      "id": "m1",
+      "name": "Example Membership Tier",
+      "price": "$97/mo",
+      "priceValue": 97,
+      "members": 0,
+      "status": "Planning",
+      "notes": "Add your first membership tier here"
+    }
+  ]
+}
