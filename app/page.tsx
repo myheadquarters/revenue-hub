@@ -386,24 +386,35 @@ export default function RevenueHub() {
                       <table className="w-full text-left">
                         <thead><tr className="border-b border-zinc-800">
                           <th className={thCls}>Grant</th><th className={thCls}>Amount</th>
-                          <th className={thCls}>Deadline</th><th className={thCls}></th>
+                          <th className={thCls}>Deadline</th><th className={thCls}>Status</th>
+                          <th className={thCls}></th>
                         </tr></thead>
-                        <tbody>{shown.map((g, i) => (
-                          <tr key={i} className={trCls}>
-                            <td className="py-4 pr-4">
-                              <div className="font-medium text-white text-sm">{g.name}</div>
-                              <div className="text-xs text-zinc-500 mt-0.5 max-w-sm">{(g.description || '').slice(0, 100)}{(g.description || '').length > 100 ? '…' : ''}</div>
-                            </td>
-                            <td className="py-4 pr-4 text-sm text-emerald-400 whitespace-nowrap">{g.amount || 'Variable'}</td>
-                            <td className="py-4 pr-4 whitespace-nowrap">{deadlineTag(g.deadline || 'Rolling')}</td>
-                            <td className="py-4">
-                              <div className="flex gap-3 items-center">
-                                <button onClick={() => addToPipeline(g)} className="text-xs text-zinc-500 hover:text-indigo-400 whitespace-nowrap transition-colors">+ Pipeline</button>
-                                {g.url && g.url !== '#' && <a href={g.url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 hover:text-indigo-300">Apply →</a>}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}</tbody>
+                        <tbody>{shown.map((g, i) => {
+                          const inPipeline = data.grants.find(p => p.name === g.name);
+                          return (
+                            <tr key={i} className={trCls}>
+                              <td className="py-4 pr-4">
+                                <div className="font-medium text-white text-sm">{g.name}</div>
+                                <div className="text-xs text-zinc-500 mt-0.5 max-w-sm">{(g.description || '').slice(0, 100)}{(g.description || '').length > 100 ? '…' : ''}</div>
+                              </td>
+                              <td className="py-4 pr-4 text-sm text-emerald-400 whitespace-nowrap">{g.amount || 'Variable'}</td>
+                              <td className="py-4 pr-4 whitespace-nowrap">{deadlineTag(g.deadline || 'Rolling')}</td>
+                              <td className="py-4 pr-4">
+                                {inPipeline
+                                  ? <span className={`text-xs px-2 py-1 rounded-full ${STATUS_COLORS[inPipeline.status]}`}>{inPipeline.status}</span>
+                                  : <span className="text-xs text-zinc-600">—</span>}
+                              </td>
+                              <td className="py-4">
+                                <div className="flex gap-3 items-center">
+                                  {inPipeline
+                                    ? <button onClick={() => setModal({ type: 'edit-grant', item: inPipeline })} className="text-xs text-zinc-500 hover:text-white">Edit</button>
+                                    : <button onClick={() => addToPipeline(g)} className="text-xs text-zinc-500 hover:text-indigo-400 whitespace-nowrap transition-colors">+ Pipeline</button>}
+                                  {g.url && g.url !== '#' && <a href={g.url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 hover:text-indigo-300">Apply →</a>}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}</tbody>
                       </table>
                     </div>
                     {list.length > 8 && (
