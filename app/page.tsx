@@ -252,6 +252,23 @@ export default function RevenueHub() {
     setGrantSubTab('pipeline');
   };
 
+  const editOrAdd = (g: DbGrant) => {
+    if (!data) return;
+    const existing = data.grants.find(p => p.name === g.name);
+    if (existing) {
+      setModal({ type: 'edit-grant', item: existing });
+    } else {
+      const newGrant: Grant = {
+        id: `g${Date.now()}`, name: g.name, amount: g.amount || 'Variable',
+        amountValue: 0, deadline: g.deadline || 'Rolling', status: 'Not Applied',
+        url: g.url || '#', description: g.description || '', notes: '',
+      };
+      const updated = { ...data, grants: [...data.grants, newGrant] };
+      setData(updated);
+      setModal({ type: 'edit-grant', item: newGrant });
+    }
+  };
+
   const totalGrantPotential = data?.grants.filter(g => g.status !== 'Lost').reduce((s, g) => s + g.amountValue, 0) || 0;
   const wonGrants = data?.grants.filter(g => g.status === 'Won').reduce((s, g) => s + g.amountValue, 0) || 0;
   const confirmedSponsors = data?.sponsors.filter(s => ['Confirmed', 'Paid'].includes(s.status)).reduce((s, sp) => s + sp.dealValue, 0) || 0;
@@ -454,9 +471,7 @@ export default function RevenueHub() {
                               </td>
                               <td className="py-4">
                                 <div className="flex gap-3 items-center">
-                                  {inPipeline
-                                    ? <button onClick={() => setModal({ type: 'edit-grant', item: inPipeline })} className="text-xs text-zinc-500 hover:text-white">Edit</button>
-                                    : <button onClick={() => addToPipeline(g)} className="text-xs text-zinc-500 hover:text-indigo-400 whitespace-nowrap transition-colors">+ Pipeline</button>}
+                                  <button onClick={() => editOrAdd(g)} className="text-xs text-zinc-500 hover:text-white">Edit</button>
                                   {g.url && g.url !== '#' && <a href={g.url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 hover:text-indigo-300">Apply →</a>}
                                 </div>
                               </td>
