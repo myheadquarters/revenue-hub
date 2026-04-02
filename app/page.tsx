@@ -189,7 +189,7 @@ function ItemModal({ modal, data, onClose, onSave }: {
 type DbGrant = { name: string; amount: string; description: string; deadline: string; url: string };
 type GrantDb = Record<string, DbGrant[]>;
 const DB_CATEGORIES = ['Women Grants', 'Business Grants', 'Non-Profits'] as const;
-type GrantSubTab = 'pipeline' | typeof DB_CATEGORIES[number];
+type GrantSubTab = 'pipeline' | 'applied' | typeof DB_CATEGORIES[number];
 
 // ==================== MAIN ====================
 export default function RevenueHub() {
@@ -321,12 +321,19 @@ export default function RevenueHub() {
               {/* Grant sub-tabs */}
               <div className="flex items-center justify-between mb-5">
                 <div className="flex gap-1.5 flex-wrap">
-                  {(['pipeline', ...DB_CATEGORIES] as GrantSubTab[]).map(sub => (
-                    <button key={sub} onClick={() => { setGrantSubTab(sub); setExpandedCat(false); }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${grantSubTab === sub ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
-                      {sub === 'pipeline' ? '📋 My Pipeline' : sub === 'Women Grants' ? '👩 Women Grants' : sub === 'Business Grants' ? '💼 Business Grants' : '🏛 Non-Profits'}
-                    </button>
-                  ))}
+                  {(['pipeline', 'applied', ...DB_CATEGORIES] as GrantSubTab[]).map(sub => {
+                    const appliedCount = sub === 'applied' ? data.grants.filter(g => ['Applied','Pending','Won'].includes(g.status)).length : 0;
+                    return (
+                      <button key={sub} onClick={() => { setGrantSubTab(sub); setExpandedCat(false); }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${grantSubTab === sub ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                        {sub === 'pipeline' ? '📋 My Pipeline'
+                          : sub === 'applied' ? `✅ Applied${appliedCount > 0 ? ` (${appliedCount})` : ''}`
+                          : sub === 'Women Grants' ? '👩 Women Grants'
+                          : sub === 'Business Grants' ? '💼 Business Grants'
+                          : '🏛 Non-Profits'}
+                      </button>
+                    );
+                  })}
                 </div>
                 {grantSubTab === 'pipeline' && (
                   <div className="flex gap-2">
@@ -375,8 +382,49 @@ export default function RevenueHub() {
                 </div>
               )}
 
+              {/* Applied sub-tab */}
+              {grantSubTab === 'applied' && (() => {
+                const applied = [...data.grants]
+                  .filter(g => ['Applied', 'Pending', 'Won', 'Lost'].includes(g.status))
+                  .sort((a, b) => {
+                    const order = ['Won', 'Pending', 'Applied', 'Lost'];
+                    return order.indexOf(a.status) - order.indexOf(b.status);
+                  });
+                return applied.length === 0
+                  ? <div className="text-center py-12 text-zinc-600">No applied grants yet. Change a grant status to Applied to see it here.</div>
+                  : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                        <thead><tr className="border-b border-zinc-800">
+                          <th className={thCls}>Grant</th><th className={thCls}>Amount</th>
+                          <th className={thCls}>Deadline</th><th className={thCls}>Status</th>
+                          <th className={thCls}>Notes</th><th className={thCls}></th>
+                        </tr></thead>
+                        <tbody>{applied.map(g => (
+                          <tr key={g.id} className={trCls}>
+                            <td className="py-4 pr-4">
+                              <div className="font-medium text-white text-sm">{g.name}</div>
+                              <div className="text-xs text-zinc-500 mt-0.5 max-w-xs">{g.description.slice(0, 80)}{g.description.length > 80 ? '…' : ''}</div>
+                            </td>
+                            <td className="py-4 pr-4 text-sm text-emerald-400 whitespace-nowrap">{g.amount}</td>
+                            <td className="py-4 pr-4 whitespace-nowrap">{deadlineTag(g.deadline)}</td>
+                            <td className="py-4 pr-4"><span className={`text-xs px-2 py-1 rounded-full ${STATUS_COLORS[g.status]}`}>{g.status}</span></td>
+                            <td className="py-4 pr-4 text-xs text-zinc-500 max-w-xs">{g.notes || '—'}</td>
+                            <td className="py-4">
+                              <div className="flex gap-3">
+                                <button onClick={() => setModal({ type: 'edit-grant', item: g })} className="text-xs text-zinc-500 hover:text-white">Edit</button>
+                                {g.url && g.url !== '#' && <a href={g.url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 hover:text-indigo-300">Apply →</a>}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  );
+              })()}
+
               {/* DB category sub-tabs */}
-              {grantSubTab !== 'pipeline' && (() => {
+              {grantSubTab !== 'pipeline' && grantSubTab !== 'applied' && (() => {
                 const list = grantDb[grantSubTab] || [];
                 const shown = expandedCat ? list : list.slice(0, 8);
                 return (
