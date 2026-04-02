@@ -369,7 +369,7 @@ export default function RevenueHub() {
                       <th className={thCls}>Deadline</th><th className={thCls}>Status</th>
                       <th className={thCls}>Notes</th><th className={thCls}></th>
                     </tr></thead>
-                    <tbody>{[...data.grants].sort((a, b) => {
+                    <tbody>{[...data.grants].filter(g => !['Applied','Pending','Won','Lost'].includes(g.status)).sort((a, b) => {
                         const rolling = ['Rolling', 'Continuous', 'Rolling 2026', ''];
                         const aRolling = rolling.includes(a.deadline);
                         const bRolling = rolling.includes(b.deadline);
