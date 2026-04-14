@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFileSync } from 'fs';
+import { writeFile } from 'fs/promises';
 import path from 'path';
 
 const FILE = path.join(process.cwd(), 'app/data/initiatives.json');
@@ -49,7 +50,8 @@ export async function POST(req: NextRequest) {
       await kvSet(body);
       return NextResponse.json({ ok: true });
     }
-    return NextResponse.json({ ok: false, error: 'KV not configured' }, { status: 500 });
+    await writeFile(FILE, JSON.stringify(body, null, 2));
+    return NextResponse.json({ ok: true, local: true });
   } catch {
     return NextResponse.json({ ok: false }, { status: 500 });
   }

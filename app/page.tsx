@@ -8,6 +8,10 @@ type Status = 'Not Applied' | 'Applied' | 'Pending' | 'Won' | 'Lost' | 'Prospect
 interface Grant {
   id: string; name: string; amount: string; amountValue: number;
   deadline: string; status: Status; url: string; description: string; notes: string;
+  source?: string; fitScore?: number; likelihoodScore?: number;
+  effort?: string; nextAction?: string; requiredMaterials?: string;
+  applicationDraft?: string; emailSubject?: string; emailDraft?: string;
+  lastReviewed?: string;
 }
 interface Sponsor {
   id: string; company: string; contact: string; email: string;
@@ -84,6 +88,48 @@ const inp = "w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text
 const sel = "w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500";
 const ta = "w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 h-20 resize-none";
 
+const grantDefaults = {
+  source: '',
+  fitScore: 0,
+  likelihoodScore: 0,
+  effort: '',
+  nextAction: '',
+  requiredMaterials: '',
+  applicationDraft: '',
+  emailSubject: '',
+  emailDraft: '',
+  lastReviewed: '',
+};
+
+function withGrantDefaults(grant: Grant): Grant {
+  return { ...grantDefaults, ...grant };
+}
+
+function scoreTone(score?: number) {
+  if ((score || 0) >= 8) return 'bg-emerald-900/40 text-emerald-300 border-emerald-700/40';
+  if ((score || 0) >= 5) return 'bg-yellow-900/40 text-yellow-300 border-yellow-700/40';
+  return 'bg-zinc-800 text-zinc-400 border-zinc-700';
+}
+
+function scorePill(label: string, score?: number) {
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] ${scoreTone(score)}`}>
+      <span className="text-zinc-500">{label}</span>
+      <span>{score || 0}/10</span>
+    </span>
+  );
+}
+
+function formatUpdateDate(value?: string) {
+  if (!value) return 'No updates yet';
+  const dateOnly = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const parsed = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return `Updated ${parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+}
+
 // ==================== FORM MODAL ====================
 function ItemModal({ modal, data, onClose, onSave }: {
   modal: { type: string; item?: unknown }; data: Data;
@@ -91,14 +137,21 @@ function ItemModal({ modal, data, onClose, onSave }: {
 }) {
   const isEdit = modal.type.startsWith('edit-');
   const section = modal.type.replace('add-', '').replace('edit-', '');
+  const [seed] = useState(() => Date.now());
   const blanks: Record<string, unknown> = {
-    grant: { id: `g${Date.now()}`, name: '', amount: '', amountValue: 0, deadline: '', status: 'Not Applied', url: '', description: '', notes: '' },
-    sponsor: { id: `s${Date.now()}`, company: '', contact: '', email: '', deal: '', dealValue: 0, editions: '', status: 'Prospect', notes: '' },
-    partnership: { id: `p${Date.now()}`, company: '', type: '', value: '', dealValue: 0, status: 'Prospect', startDate: '', notes: '' },
-    speaking: { id: `sp${Date.now()}`, event: '', organizer: '', fee: '', feeValue: 0, date: '', status: 'Prospect', location: '', notes: '' },
-    membership: { id: `m${Date.now()}`, name: '', price: '', priceValue: 0, members: 0, status: 'Planning', notes: '' },
+    grant: { id: `g${seed}`, name: '', amount: '', amountValue: 0, deadline: '', status: 'Not Applied', url: '', description: '', notes: '', ...grantDefaults },
+    sponsor: { id: `s${seed}`, company: '', contact: '', email: '', deal: '', dealValue: 0, editions: '', status: 'Prospect', notes: '' },
+    partnership: { id: `p${seed}`, company: '', type: '', value: '', dealValue: 0, status: 'Prospect', startDate: '', notes: '' },
+    speaking: { id: `sp${seed}`, event: '', organizer: '', fee: '', feeValue: 0, date: '', status: 'Prospect', location: '', notes: '' },
+    membership: { id: `m${seed}`, name: '', price: '', priceValue: 0, members: 0, status: 'Planning', notes: '' },
   };
-  const [form, setForm] = useState<Record<string, unknown>>(isEdit ? (modal.item as Record<string, unknown>) : (blanks[section] as Record<string, unknown>));
+  const [form, setForm] = useState<Record<string, unknown>>(
+    isEdit
+      ? (section === 'grant'
+        ? ({ ...withGrantDefaults(modal.item as Grant) } as Record<string, unknown>)
+        : (modal.item as Record<string, unknown>))
+      : (blanks[section] as Record<string, unknown>)
+  );
   const set = (k: string, v: unknown) => setForm(p => ({ ...p, [k]: v }));
 
   const handleSave = () => {
@@ -137,8 +190,20 @@ function ItemModal({ modal, data, onClose, onSave }: {
         <Field label="Deadline"><input className={inp} value={form.deadline as string} onChange={e => set('deadline', e.target.value)} placeholder="YYYY-MM-DD or Rolling" /></Field>
         <Field label="Status"><select className={sel} value={form.status as string} onChange={e => set('status', e.target.value)}>{GRANT_STATUSES.map(s => <option key={s}>{s}</option>)}</select></Field>
         <Field label="URL"><input className={inp} value={form.url as string} onChange={e => set('url', e.target.value)} /></Field>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Source"><input className={inp} value={form.source as string} onChange={e => set('source', e.target.value)} placeholder="Official site or database" /></Field>
+          <Field label="Effort"><input className={inp} value={form.effort as string} onChange={e => set('effort', e.target.value)} placeholder="Low / Medium / High" /></Field>
+          <Field label="Fit Score /10"><input className={inp} type="number" min="0" max="10" value={form.fitScore as number} onChange={e => set('fitScore', Number(e.target.value))} /></Field>
+          <Field label="Likelihood /10"><input className={inp} type="number" min="0" max="10" value={form.likelihoodScore as number} onChange={e => set('likelihoodScore', Number(e.target.value))} /></Field>
+        </div>
         <Field label="Description"><textarea className={ta} value={form.description as string} onChange={e => set('description', e.target.value)} /></Field>
+        <Field label="Next Action"><textarea className={ta} value={form.nextAction as string} onChange={e => set('nextAction', e.target.value)} /></Field>
+        <Field label="Required Materials"><textarea className={ta} value={form.requiredMaterials as string} onChange={e => set('requiredMaterials', e.target.value)} /></Field>
         <Field label="Notes"><textarea className={ta} value={form.notes as string} onChange={e => set('notes', e.target.value)} /></Field>
+        <Field label="Application Draft"><textarea className={ta} value={form.applicationDraft as string} onChange={e => set('applicationDraft', e.target.value)} /></Field>
+        <Field label="Email Subject"><input className={inp} value={form.emailSubject as string} onChange={e => set('emailSubject', e.target.value)} /></Field>
+        <Field label="Email Draft"><textarea className={ta} value={form.emailDraft as string} onChange={e => set('emailDraft', e.target.value)} /></Field>
+        <Field label="Last Reviewed"><input className={inp} value={form.lastReviewed as string} onChange={e => set('lastReviewed', e.target.value)} placeholder="YYYY-MM-DD" /></Field>
       </>}
       {section === 'sponsor' && <>
         <Field label="Company"><input className={inp} value={form.company as string} onChange={e => set('company', e.target.value)} /></Field>
@@ -209,7 +274,7 @@ export default function RevenueHub() {
         fetch('/api/initiatives').then(r => r.json()),
         fetch('/api/grants-db').then(r => r.json()),
       ]);
-      setData(init);
+      setData({ ...init, grants: (init.grants || []).map((grant: Grant) => withGrantDefaults(grant)) });
       setGrantDb(db);
     } finally { setLoading(false); }
   }, []);
@@ -223,7 +288,7 @@ export default function RevenueHub() {
     if (result.ok) {
       setData(updated);
     } else {
-      alert('Save failed: ' + (result.error || 'Unknown error. KV storage may not be configured.'));
+      alert('Save failed: ' + (result.error || 'Unknown error.'));
     }
     setSaving(false);
     setModal(null);
@@ -241,17 +306,6 @@ export default function RevenueHub() {
     saveData({ ...data, grants: data.grants.filter(g => !expired.find(e => e.id === g.id)) });
   };
 
-  const addToPipeline = (g: DbGrant) => {
-    if (!data) return;
-    const newGrant: Grant = {
-      id: `g${Date.now()}`, name: g.name, amount: g.amount || 'Variable',
-      amountValue: 0, deadline: g.deadline || 'Rolling', status: 'Not Applied',
-      url: g.url || '#', description: g.description || '', notes: '',
-    };
-    saveData({ ...data, grants: [...data.grants, newGrant] });
-    setGrantSubTab('pipeline');
-  };
-
   const editOrAdd = (g: DbGrant) => {
     if (!data) return;
     const existing = data.grants.find(p => p.name === g.name);
@@ -261,7 +315,7 @@ export default function RevenueHub() {
       const newGrant: Grant = {
         id: `g${Date.now()}`, name: g.name, amount: g.amount || 'Variable',
         amountValue: 0, deadline: g.deadline || 'Rolling', status: 'Not Applied',
-        url: g.url || '#', description: g.description || '', notes: '',
+        url: g.url || '#', description: g.description || '', notes: '', ...grantDefaults,
       };
       const updated = { ...data, grants: [...data.grants, newGrant] };
       setData(updated);
@@ -276,6 +330,25 @@ export default function RevenueHub() {
   const activeMembers = data?.memberships.filter(m => m.status === 'Active').reduce((s, m) => s + m.priceValue * m.members, 0) || 0;
   const totalConfirmed = wonGrants + confirmedSponsors + confirmedSpeaking + activeMembers;
   const urgentDeadlines = data?.grants.filter(g => { const d = new Date(g.deadline); const diff = (d.getTime() - Date.now()) / 86400000; return diff >= 0 && diff <= 30; }).length || 0;
+  const scoredGrants = data?.grants.filter(g => (g.fitScore || 0) > 0) || [];
+  const avgFit = scoredGrants.length ? scoredGrants.reduce((sum, grant) => sum + (grant.fitScore || 0), 0) / scoredGrants.length : 0;
+  const readyToDraft = data?.grants.filter(g => (g.fitScore || 0) >= 7 && (g.likelihoodScore || 0) >= 6).length || 0;
+  const latestReviewedDate = (grants: Grant[]) =>
+    grants
+      .map(grant => grant.lastReviewed)
+      .filter((value): value is string => Boolean(value))
+      .sort()
+      .at(-1);
+  const subTabLastUpdated = (sub: GrantSubTab) => {
+    if (sub === 'pipeline') {
+      return latestReviewedDate(data?.grants.filter(g => !['Applied', 'Pending', 'Won', 'Lost'].includes(g.status)) || []);
+    }
+    if (sub === 'applied') {
+      return latestReviewedDate(data?.grants.filter(g => ['Applied', 'Pending', 'Won', 'Lost'].includes(g.status)) || []);
+    }
+    return latestReviewedDate(data?.grants || []);
+  };
+  const lastGrantSweep = latestReviewedDate(data?.grants || []);
 
   const tabs = [
     { id: 'grants' as Tab, label: 'Grants', emoji: '🏆' },
@@ -305,13 +378,27 @@ export default function RevenueHub() {
       </div>
 
       <div className="px-8 py-8 max-w-7xl mx-auto">
+        <div className="mb-6 rounded-3xl border border-indigo-500/30 bg-gradient-to-r from-zinc-900 via-zinc-900 to-indigo-950/50 p-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="text-xs uppercase tracking-widest text-indigo-300">Grants sweep</div>
+              <div className="mt-1 text-lg font-semibold text-white">{formatUpdateDate(lastGrantSweep)}</div>
+              <div className="mt-1 text-sm text-zinc-400">Weekly automation stays on Monday. Today&apos;s first grant research pass is already loaded into the Grants tab.</div>
+            </div>
+            <button onClick={() => { setActiveTab('grants'); setGrantSubTab('pipeline'); }} className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
+              Review grants
+            </button>
+          </div>
+        </div>
+
         {/* Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           {[
             { label: 'Confirmed Revenue', value: `$${totalConfirmed.toLocaleString()}`, sub: 'won + confirmed', color: 'text-emerald-400' },
             { label: 'Grant Potential', value: `$${totalGrantPotential.toLocaleString()}`, sub: `${data?.grants.filter(g => ['Applied','Pending'].includes(g.status)).length || 0} in pipeline`, color: 'text-indigo-400' },
             { label: 'Active Sponsors', value: `${data?.sponsors.filter(s => ['Confirmed','Paid'].includes(s.status)).length || 0}`, sub: `$${confirmedSponsors.toLocaleString()} confirmed`, color: 'text-blue-400' },
             { label: 'Urgent Deadlines', value: `${urgentDeadlines}`, sub: 'grants due in 30 days', color: urgentDeadlines > 0 ? 'text-yellow-400' : 'text-zinc-400' },
+            { label: 'Avg Grant Fit', value: `${avgFit.toFixed(1)}/10`, sub: `${readyToDraft} ready to draft`, color: 'text-fuchsia-400' },
           ].map(card => (
             <div key={card.label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
               <div className="text-xs uppercase tracking-widest text-zinc-500 mb-2">{card.label}</div>
@@ -340,14 +427,14 @@ export default function RevenueHub() {
                 <div className="flex gap-1.5 flex-wrap">
                   {(['pipeline', 'applied', ...DB_CATEGORIES] as GrantSubTab[]).map(sub => {
                     const appliedCount = sub === 'applied' ? data.grants.filter(g => ['Applied','Pending','Won'].includes(g.status)).length : 0;
+                    const label = sub === 'pipeline' ? 'My Pipeline'
+                      : sub === 'applied' ? `Applied${appliedCount > 0 ? ` (${appliedCount})` : ''}`
+                      : sub;
                     return (
                       <button key={sub} onClick={() => { setGrantSubTab(sub); setExpandedCat(false); }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${grantSubTab === sub ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
-                        {sub === 'pipeline' ? '📋 My Pipeline'
-                          : sub === 'applied' ? `✅ Applied${appliedCount > 0 ? ` (${appliedCount})` : ''}`
-                          : sub === 'Women Grants' ? '👩 Women Grants'
-                          : sub === 'Business Grants' ? '💼 Business Grants'
-                          : '🏛 Non-Profits'}
+                        className={`rounded-lg px-3 py-2 text-left transition-all ${grantSubTab === sub ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                        <div className="text-xs font-medium">{label}</div>
+                        <div className={`mt-1 text-[10px] ${grantSubTab === sub ? 'text-zinc-300' : 'text-zinc-600'}`}>{formatUpdateDate(subTabLastUpdated(sub))}</div>
                       </button>
                     );
                   })}
@@ -362,12 +449,27 @@ export default function RevenueHub() {
 
               {/* Pipeline sub-tab */}
               {grantSubTab === 'pipeline' && (
-                <div className="overflow-x-auto">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+                      <div className="text-xs uppercase tracking-widest text-zinc-500">Top Fit</div>
+                      <div className="mt-2 text-sm text-white">{[...data.grants].sort((a, b) => (b.fitScore || 0) - (a.fitScore || 0))[0]?.name || 'None yet'}</div>
+                    </div>
+                    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+                      <div className="text-xs uppercase tracking-widest text-zinc-500">Best Win Odds</div>
+                      <div className="mt-2 text-sm text-white">{[...data.grants].sort((a, b) => (b.likelihoodScore || 0) - (a.likelihoodScore || 0))[0]?.name || 'None yet'}</div>
+                    </div>
+                    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+                      <div className="text-xs uppercase tracking-widest text-zinc-500">Ready This Week</div>
+                      <div className="mt-2 text-sm text-white">{readyToDraft} shortlisted grants with strong fit and win odds</div>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead><tr className="border-b border-zinc-800">
                       <th className={thCls}>Grant</th><th className={thCls}>Amount</th>
-                      <th className={thCls}>Deadline</th><th className={thCls}>Status</th>
-                      <th className={thCls}>Notes</th><th className={thCls}></th>
+                      <th className={thCls}>Deadline</th><th className={thCls}>Fit</th>
+                      <th className={thCls}>Next Step</th><th className={thCls}></th>
                     </tr></thead>
                     <tbody>{[...data.grants].filter(g => !['Applied','Pending','Won','Lost'].includes(g.status)).sort((a, b) => {
                         const rolling = ['Rolling', 'Continuous', 'Rolling 2026', ''];
@@ -382,11 +484,22 @@ export default function RevenueHub() {
                         <td className="py-4 pr-4">
                           <div className="font-medium text-white text-sm">{g.name}</div>
                           <div className="text-xs text-zinc-500 mt-0.5 max-w-xs">{g.description.slice(0, 80)}{g.description.length > 80 ? '…' : ''}</div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <span className={`text-xs px-2 py-1 rounded-full ${STATUS_COLORS[g.status]}`}>{g.status}</span>
+                            {scorePill('Fit', g.fitScore)}
+                            {scorePill('Win', g.likelihoodScore)}
+                          </div>
                         </td>
                         <td className="py-4 pr-4 text-sm text-emerald-400 whitespace-nowrap">{g.amount}</td>
                         <td className="py-4 pr-4 whitespace-nowrap">{deadlineTag(g.deadline)}</td>
-                        <td className="py-4 pr-4"><span className={`text-xs px-2 py-1 rounded-full ${STATUS_COLORS[g.status]}`}>{g.status}</span></td>
-                        <td className="py-4 pr-4 text-xs text-zinc-500 max-w-xs">{g.notes || '—'}</td>
+                        <td className="py-4 pr-4 text-xs text-zinc-400 max-w-xs">
+                          <div className="space-y-1">
+                            <div>{g.source || 'Source not set'}</div>
+                            <div>{g.effort ? `Effort: ${g.effort}` : 'Effort not set'}</div>
+                            <div>{g.lastReviewed ? `Reviewed ${g.lastReviewed}` : 'Not reviewed yet'}</div>
+                          </div>
+                        </td>
+                        <td className="py-4 pr-4 text-xs text-zinc-500 max-w-sm">{g.nextAction || g.notes || '-'}</td>
                         <td className="py-4">
                           <div className="flex gap-3">
                             <button onClick={() => setModal({ type: 'edit-grant', item: g })} className="text-xs text-zinc-500 hover:text-white">Edit</button>
@@ -396,6 +509,7 @@ export default function RevenueHub() {
                       </tr>
                     ))}</tbody>
                   </table>
+                </div>
                 </div>
               )}
 
